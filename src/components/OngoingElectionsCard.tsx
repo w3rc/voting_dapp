@@ -6,9 +6,12 @@ import { Button } from './ui/button'
 import { ContractFunctionParameterBuilder } from '@/services/wallets/contractFunctionParameterBuilder'
 import { ContractId } from '@hashgraph/sdk'
 import { useState } from 'react'
+import { useToast } from './ui/use-toast'
 
 const OngoingElectionsCard = ({ election, candidates, walletInterface }: any) => {
     const [endingElection, setEndingElection] = useState(false);
+    const { toast } = useToast()
+
     return (
         <Card key={election.electionId} className={cn("min-w-[380px] flex flex-col")}>
             <CardHeader>
@@ -35,11 +38,16 @@ const OngoingElectionsCard = ({ election, candidates, walletInterface }: any) =>
                 <ElectionDialog election={election} candidates={candidates} walletInterface={walletInterface} />
                 <Button onClick={() => {
                     setEndingElection(true);
-                    walletInterface?.executeContractFunction(ContractId.fromString(import.meta.env.VITE_CONTRACT_ID), 'endElection', new ContractFunctionParameterBuilder().addParam({ type: 'uint256', name: '_electionId', value: election.electionId }), 150000)
+                    walletInterface?.executeContractFunction(ContractId.fromString(import.meta.env.VITE_CONTRACT_ID), 'endElection', new ContractFunctionParameterBuilder().addParam({ type: 'uint64', name: '_electionId', value: election.electionId }), 150000)
                         .then((result:any) => {
                             console.log("Contract Executed", result);
                         }).catch((error:any) => {
                             console.error("Error Executing Contract", error);
+                            toast({
+                                title: "Error",
+                                description: "There was an error voting for the candidate",
+                                variant: "destructive",
+                            });
                         }).finally(() => {
                             setEndingElection(false);
                         })

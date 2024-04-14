@@ -180,16 +180,25 @@ class MetaMaskWallet implements WalletInterface {
     // to call the function, use contract[functionName](...functionParameters, ethersOverrides)
     const contract = new ethers.Contract(`0x${contractId.toSolidityAddress()}`, abi, signer);
     try {
+
+      await contract.callStatic[functionName](
+        ...functionParameters.buildEthersParams(),
+        {
+          gasLimit: gasLimit === -1 ? undefined : gasLimit
+        }
+      );
+
       const txResult = await contract[functionName](
         ...functionParameters.buildEthersParams(),
         {
           gasLimit: gasLimit === -1 ? undefined : gasLimit
         }
       );
-      return txResult.hash;
+      return txResult;
     } catch (error: any) {
       console.warn(error.message ? error.message : error);
-      return null;
+      console.warn(error.data);
+      throw error;
     }
   }
 

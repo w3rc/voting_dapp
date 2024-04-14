@@ -5,11 +5,13 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ContractFunctionParameterBuilder } from '@/services/wallets/contractFunctionParameterBuilder';
 import { ContractId } from '@hashgraph/sdk';
+import { useToast } from './ui/use-toast';
 
-const ElectionDialog = ({election, candidates, walletInterface}:any) => {
+const ElectionDialog = ({ election, candidates, walletInterface }: any) => {
     const [voteDialogOpen, setVoteDialogOpen] = useState(false);
     const [candidateToVote, setCandidateToVote] = useState('');
     const [voting, setVoting] = useState(false);
+    const { toast } = useToast()
 
     return (
         <Dialog open={voteDialogOpen} onOpenChange={setVoteDialogOpen}>
@@ -36,7 +38,6 @@ const ElectionDialog = ({election, candidates, walletInterface}:any) => {
                                         .map((candidate: any) => {
                                             if (candidate.electionId === election.electionId) {
                                                 return candidate.candidates.map((candidate: any, index: number) => {
-                                                    console.log(candidate)
                                                     return (
                                                         <SelectItem key={index} value={candidate.candidateId}>
                                                             {candidate.candidateName ? candidate.candidateName.replaceAll('\'', '') : candidate.candidateId}
@@ -53,11 +54,16 @@ const ElectionDialog = ({election, candidates, walletInterface}:any) => {
                 <DialogFooter>
                     <Button onClick={() => {
                         setVoting(true);
-                        walletInterface?.executeContractFunction(ContractId.fromString(import.meta.env.VITE_CONTRACT_ID), 'vote', new ContractFunctionParameterBuilder().addParam({ type: 'uint256', name: '_electionId', value: election.electionId }).addParam({ type: 'uint256', name: "_candidateId", value: candidateToVote }), 1750000).then((result: any) => {
+                        walletInterface?.executeContractFunction(ContractId.fromString(import.meta.env.VITE_CONTRACT_ID), 'vote', new ContractFunctionParameterBuilder().addParam({ type: 'uint64', name: '_electionId', value: election.electionId }).addParam({ type: 'uint64', name: "_candidateId", value: candidateToVote }), 1750000).then((result: any) => {
                             console.log("Contract Executed", result);
                             setVoteDialogOpen(false);
                         }).catch((error: any) => {
-                            console.error("Error Executing Contract", error);
+                            toast({
+                                title: "Error",
+                                description: "There was an error voting for the candidate",
+                                variant: "destructive",
+                            });
+                            console.warn("Error Executing Contract", error);
                         }).finally(() => {
                             setVoting(false);
                         })
