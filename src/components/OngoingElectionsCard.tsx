@@ -42,10 +42,13 @@ const OngoingElectionsCard = ({ election, candidates, walletInterface }: any) =>
                         .then((result:any) => {
                             console.log("Contract Executed", result);
                         }).catch((error:any) => {
-                            console.error("Error Executing Contract", error);
+                            let errorDescription = "Something went wrong";
+                            if (error === "0xaa442691") {
+                                errorDescription = "You are not the owner of this election";
+                            }
                             toast({
                                 title: "Error",
-                                description: "There was an error voting for the candidate",
+                                description: errorDescription,
                                 variant: "destructive",
                             });
                         }).finally(() => {

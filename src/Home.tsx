@@ -13,6 +13,7 @@ import { ContractFunctionParameterBuilder } from './services/wallets/contractFun
 import { ContractId } from '@hashgraph/sdk'
 import OngoingElectionsCard from './components/OngoingElectionsCard'
 import PastElectionsCard from './components/PastElectionsCard'
+import { useToast } from './components/ui/use-toast'
 
 interface Candidate {
     electionId: number;
@@ -31,38 +32,54 @@ function Home() {
     const [fetchingOngoingElections, setFetchingOngoingElections] = useState(true);
     const [fetchingPastElections, setFetchingPastElections] = useState(true);
     const [addingElection, setAddingElection] = useState(false);
+    const { toast } = useToast();
+
+    const getAndSetEndedElections = async () => {
+        const elections = await getEndedElections();
+        if (elections.length) {
+            const uniqueElections = elections.filter((election: { electionId: any }, index: any, self: any[]) =>
+                index === self.findIndex((e) => (
+                    e.electionId === election.electionId
+                ))
+            );
+            setPastElections(uniqueElections);
+        } else {
+            setPastElections([]);
+        }
+        setFetchingPastElections(false);
+    }
+
+    const getAndSetOngoingElections = async () => {
+        const elections = await getOngoingElections();
+        console.log(elections);
+        if (elections.length) {
+            const uniqueElections = elections.filter((election: { electionId: any }, index: any, self: any[]) =>
+                index === self.findIndex((e) => (
+                    e.electionId === election.electionId
+                ))
+            );
+            setOngoingElections(uniqueElections);
+        } else {
+            setOngoingElections([]);
+        }
+        setFetchingOngoingElections(false);
+    }
 
     useEffect(() => {
         const intervalId = setInterval(() => {
-            getEndedElections().then((elections) => {
-                if (elections.length) {
-                    const uniqueElections = elections.filter((election: { electionId: any }, index: any, self: any[]) =>
-                        index === self.findIndex((e) => (
-                            e.electionId === election.electionId
-                        ))
-                    );
-                    setPastElections(uniqueElections);
-                    setFetchingPastElections(false);
-                }
-            });
-            getOngoingElections().then((elections) => {
-                if (elections.length) {
-                    const uniqueElections = elections.filter((election: { electionId: any }, index: any, self: any[]) =>
-                        index === self.findIndex((e) => (
-                            e.electionId === election.electionId
-                        ))
-                    );
-                    setOngoingElections(uniqueElections);
-                    setFetchingOngoingElections(false);
-                }
-            });
+            getAndSetEndedElections();
+            getAndSetOngoingElections();
             getElections().then(async (elections) => {
                 if (elections.length > 0) {
                     elections.forEach(async (election: any) => {
                         const candidatesByElectionId = await getCandidates(election.electionId);
                         setCandidates((prev: any) => {
-                            if (!prev.some((item: any) => item.electionId === election.electionId)) {
+                            const index = prev.findIndex((candidatesByElectionId: any) => candidatesByElectionId.electionId === election.electionId);
+
+                            if (index === -1) {
                                 return [...prev, { electionId: election.electionId, candidates: candidatesByElectionId }];
+                            } else {
+                                prev[index] = { electionId: election.electionId, candidates: candidatesByElectionId };
                             }
                             return prev;
                         });
@@ -172,24 +189,27 @@ function Home() {
                                                 console.log("All contracts executed", results);
                                                 setAddElectionDialogOpen(false);
                                                 setAddingElection(false);
+                                                setElectionName('');
+                                                setElectionCandidates('');
                                             })
                                             .catch((error) => {
                                                 console.error("Error executing contracts", error);
                                                 setAddingElection(false);
                                             });
-
-                                        // candidatesArray.forEach(candidate => {
-                                        //     console.log(candidate)
-                                        //     walletInterface?.executeContractFunction(ContractId.fromString(import.meta.env.VITE_CONTRACT_ID), 'addCandidateByElectionName', new ContractFunctionParameterBuilder().addParam({ type: 'string', name: '_electionName', value: electionName }).addParam({ type: 'string', name: '_candidateName', value: candidate }), 1750000).then((result) => {
-                                        //         console.log("Contract Executed", result);
-                                        //         setAddElectionDialogOpen(false);
-                                        //     }).catch((error) => {
-                                        //         console.error("Error Executing Contract", error);
-                                        //     })
-                                        // })
                                     }).catch((error) => {
                                         console.error("Error Executing Contract", error);
+                                        let errorDescription = "Something went wrong";
+                                        if (error === "0xb86232d4000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000046265746100000000000000000000000000000000000000000000000000000000") {
+                                            errorDescription = "Election With Same Name already exists";
+                                        }
+                                        toast({
+                                            title: "Error",
+                                            description: errorDescription,
+                                            variant: "destructive",
+                                        });
+                                        setAddingElection(false);
                                     })
+
                                 }}>
                                     {addingElection ? "Loading..." : "Save changes"}
                                 </Button>

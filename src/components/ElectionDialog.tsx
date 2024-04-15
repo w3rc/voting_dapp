@@ -58,12 +58,15 @@ const ElectionDialog = ({ election, candidates, walletInterface }: any) => {
                             console.log("Contract Executed", result);
                             setVoteDialogOpen(false);
                         }).catch((error: any) => {
+                            let errorDescription = "Something went wrong";
+                            if (error === "0x05de93a1") {
+                                errorDescription = "You have already voted for this election";
+                            }
                             toast({
                                 title: "Error",
-                                description: "There was an error voting for the candidate",
+                                description: errorDescription,
                                 variant: "destructive",
                             });
-                            console.warn("Error Executing Contract", error);
                         }).finally(() => {
                             setVoting(false);
                         })
